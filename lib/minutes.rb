@@ -3,6 +3,12 @@ require "minutes/version"
 class Minutes
 
   TIME_FORMAT = /(\d?\d):(\d\d)\s*(AM|PM)/i
+  HOUR_GROUP, MINUTE_GROUP, AM_PM_GROUP = 1, 2, 3
+
+  MINUTES_IN_AN_HOUR = 60
+  HOURS_IN_A_DAY = 24
+  A_DAY = HOURS_IN_A_DAY * MINUTES_IN_AN_HOUR
+  HALF_A_DAY = A_DAY / 2
 
   def self.add_minutes time_string, additional_minutes
     minutes = self.new(time_string)
@@ -13,31 +19,31 @@ class Minutes
   def initialize time_string
     @time = 0 
 
-    unless m = time_string.match(TIME_FORMAT)
-      raise ArgumentError, time_string
-    end
+    time_data = time_string.match(TIME_FORMAT)
+    raise ArgumentError, "Time not formatted properly: #{time_string}" unless time_data
 
-    if (1..12).include?(hour = Integer(m[1]))
-      @time += hour*60 if hour != 12
+    if (1..12).include?(hour = Integer(time_data[HOUR_GROUP]))
+      hour = 0 if hour == 12
+      @time += hour*MINUTES_IN_AN_HOUR
     else
-      raise ArgumentError, "Hour must be in the range of 1..12, not #{m[1]}"
+      raise ArgumentError, "Hour is out of range: #{time_data[HOUR_GROUP]}"
     end
 
-    if (0..59).include?(minute = Integer(m[2]))
+    if (0..59).include?(minute = Integer(time_data[MINUTE_GROUP]))
       @time += minute
     else
-      raise ArgumentError, "Minute must be in the range of 0..59, not #{m[2]}"
+      raise ArgumentError, "Minutes are out of range: #{time_data[MINUTE_GROUP]}"
     end
 
-    if m[3].match(/pm/i)
-      @time += 12*60
+    if time_data[AM_PM_GROUP].match(/pm/i)
+      @time += HALF_A_DAY
     end
 
   end
 
   def add_minutes additional_minutes
     @time += additional_minutes
-    @time = @time.modulo(24*60)
+    @time = @time.modulo(A_DAY)
   end
 
   def time_string
@@ -45,16 +51,17 @@ class Minutes
   end
 
   def hour
-    hour = ((@time - minute) / 60).modulo(12)
-    hour == 0 ? 12 : hour
+    hour_24 = ((@time - minute) / MINUTES_IN_AN_HOUR)
+    hour_12 = hour_24.modulo 12
+    return hour_12 == 0 ? 12 : hour_12
   end
 
   def minute
-    @time.modulo 60
+    @time.modulo MINUTES_IN_AN_HOUR
   end
 
   def pm?
-    @time >= 12*60
+    @time >= HALF_A_DAY
   end
 
 end
