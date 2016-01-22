@@ -1,9 +1,7 @@
-require "minutes/version"
+require 'minutes/version'
+require 'minutes/time_parser'
 
 class Minutes
-
-  TIME_FORMAT = /(\d?\d):(\d\d)\s*(AM|PM)/i
-  HOUR_GROUP, MINUTE_GROUP, AM_PM_GROUP = 1, 2, 3
 
   MINUTES_IN_AN_HOUR = 60
   HOURS_IN_A_DAY = 24
@@ -17,28 +15,7 @@ class Minutes
   end
 
   def initialize time_string
-    @time = 0 
-
-    time_data = time_string.match(TIME_FORMAT)
-    raise ArgumentError, "Time not formatted properly: #{time_string}" unless time_data
-
-    if (1..12).include?(hour = Integer(time_data[HOUR_GROUP]))
-      hour = 0 if hour == 12
-      @time += hour*MINUTES_IN_AN_HOUR
-    else
-      raise ArgumentError, "Hour is out of range: #{time_data[HOUR_GROUP]}"
-    end
-
-    if (0..59).include?(minute = Integer(time_data[MINUTE_GROUP]))
-      @time += minute
-    else
-      raise ArgumentError, "Minutes are out of range: #{time_data[MINUTE_GROUP]}"
-    end
-
-    if time_data[AM_PM_GROUP].match(/pm/i)
-      @time += HALF_A_DAY
-    end
-
+    @time = TimeParser.parse(time_string)
   end
 
   def add_minutes additional_minutes
@@ -46,9 +23,15 @@ class Minutes
     @time = @time.modulo(A_DAY)
   end
 
-  def time_string
+  def to_s
     "#{hour}:#{minute.to_s.rjust(2, '0')} #{pm? ? "PM" : "AM"}"
   end
+
+  def time_string
+    to_s
+  end
+
+  private
 
   def hour
     hour_24 = ((@time - minute) / MINUTES_IN_AN_HOUR)
